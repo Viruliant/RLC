@@ -1,0 +1,17 @@
+{
+  "projectConfig": {
+    "maxSupportedFileSize": 40960,
+    "supportedFileTypes": [
+      "c",
+      "py",
+      "sh",
+      "clj",
+      "js",
+      "nix",
+      "html",
+      "txt",
+      "md",
+      "cljs"
+    ]
+  }
+}
