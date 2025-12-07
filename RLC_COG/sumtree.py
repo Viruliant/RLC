@@ -232,8 +232,6 @@ def ftree2sums(ftree, parent_path=""):
         })
     return files
 
-import time
-
 def flistwithsums(flist, dir_path: str):
     """
     Update flist with summaries for each file.
@@ -288,27 +286,82 @@ def flistwithsums(flist, dir_path: str):
 
     return updated
 
+def ftree2bashsumtree(dir_path):
+    """
+    Convert a file tree dict into a bash-style tree output string with summaries.
+    """
+    ftree = dir2tree_data(dir_path)
+    # 1. Get flat list of files to fetch/verify sums (uses cache via flistwithsums)
+    raw_list = ftree2sums(ftree)
+    sums_list = flistwithsums(raw_list, dir_path)
+    
+    # 2. Create a lookup map: { "./relative/path": "Summary text" }
+    sum_map = {item['name']: item.get('sum', '') for item in sums_list}
+
+    def get_summary(path):
+        # Normalize path to match keys in sum_map (e.g., ensure ./ prefix)
+        rel = os.path.normpath(path)
+        if not rel.startswith("./"):
+            rel = "./" + rel.lstrip("./")
+        return sum_map.get(rel, "")
+
+    def recurse(node, prefix="", last=True, parent_path=""):
+        lines = []
+        connector = "└── " if last else "├── "
+        
+        # Construct path for lookup
+        current_path = os.path.join(parent_path, node["name"])
+        
+        # Add the tree line (same as ftree2bashtree)
+        lines.append(prefix + connector + node["name"])
+        
+        # Add Summary (if it's a file)
+        if not node.get("is_dir", False):
+            summary = get_summary(current_path)
+            if summary:
+                # Indentation: if file used ├── (last=False), desc needs │   
+                #              if file used └── (last=True),  desc needs     
+                desc_prefix = prefix + ("    " if last else "│   ")
+                lines.append(f"{desc_prefix}{summary}")
+
+        # Recurse children (same as ftree2bashtree)
+        if node.get("is_dir", False):
+            children = sorted(node["children"], key=lambda x: x["name"])
+            for i, child in enumerate(children):
+                is_last = i == len(children) - 1
+                new_prefix = prefix + ("    " if last else "│   ")
+                lines.extend(recurse(child, new_prefix, is_last, current_path))
+        return lines
+
+    # Root execution
+    lines = ["."]
+    if ftree.get("is_dir", False):
+        children = sorted(ftree["children"], key=lambda x: x["name"])
+        for i, child in enumerate(children):
+            is_last = i == len(children) - 1
+            # Start recursion with empty parent_path so os.path.join works correctly
+            lines.extend(recurse(child, "", is_last, ""))
+            
+    return "\n".join(lines)
+
+
 
 def main():
     parser = argparse.ArgumentParser(description="Generate JSON tree of a directory.")
     parser.add_argument("directory", help="Path to the directory")
     args = parser.parse_args()
 
-    ftree = dir2tree_data(args.directory)
-    # print(json.dumps(ftree, indent=2))
-    flist = ftree2sums(ftree)
-    print(json.dumps(flist, indent=2))
-    print(ftree2bashtree(ftree))
-    # print(file2sum(cwfd + "/RLC_COG.ui"))
-    # flist = ftree2sums(flist)
-    # enrich with summaries (using cache if available)
-    flist = flistwithsums(flist, args.directory)
-    print(json.dumps(flist, indent=2))
+    # ftree = dir2tree_data(args.directory)
+    # # print(json.dumps(ftree, indent=2))
+    # flist = ftree2sums(ftree)
+    # # print(json.dumps(flist, indent=2))
+    # print(ftree2bashtree(ftree))
+    # # print(file2sum(cwfd + "/RLC_COG.ui"))
+    # # flist = ftree2sums(flist)
+    # # enrich with summaries (using cache if available)
+    # flist = flistwithsums(flist, args.directory)
+    # print(json.dumps(flist, indent=2))
+    print(ftree2bashsumtree(args.directory))
 
 if __name__ == "__main__":
     main()
-
-# ./dir_sum2json.py ~/sync/RLC/RLC_COG
-
-
-# ./dir_sum2json.py John --age 25 -v

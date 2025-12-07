@@ -1,8 +1,14 @@
-We need to get flistwithsums() working.
-We also need to check for a file tree.sums.json in the args.directory. as an extra source for any sums that may have already been created.
+
 
 
 ### Currently works!
+
+`ftree2bashsumtree()`
+
+`ftree2bashtree()`
+
+`flistwithsums()`
+
 `file2sum()`
 
 `dir2tree_data()` looks in the top level of `dir_path` for a file `cog_cfg.json` and parse for a `gignore` var containing a `.gitignore` style list of files and dirs to ignore and ignore them.
